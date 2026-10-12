@@ -284,19 +284,35 @@ export const productsDatabase: Product[] = [
 export function searchProducts(query: string): Product[] {
   if (!query.trim()) return [];
   
-  const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 1);
+  const searchTerms = query.toLowerCase().split(' ').filter(term => term.length >= 1);
+  const fullQuery = query.toLowerCase().trim();
   
   return productsDatabase
     .map(product => {
       let score = 0;
+      const nameLower = product.name.toLowerCase();
+      const categoryLower = product.category.toLowerCase();
       
-      // Match nel nome
+      // Match completo della query nel nome (priorità massima)
+      if (nameLower.includes(fullQuery)) {
+        score += 50;
+      }
+      
+      // Match completo della query nelle keyword
+      product.keywords.forEach(keyword => {
+        if (keyword.includes(fullQuery)) {
+          score += 30;
+        }
+      });
+      
+      // Match per singoli termini
       searchTerms.forEach(term => {
-        if (product.name.toLowerCase().includes(term)) {
+        // Match nel nome
+        if (nameLower.includes(term)) {
           score += 10;
         }
         
-        // Match nelle keyword
+        // Match nelle keyword (più flessibile)
         product.keywords.forEach(keyword => {
           if (keyword.includes(term) || term.includes(keyword)) {
             score += 5;
@@ -304,7 +320,7 @@ export function searchProducts(query: string): Product[] {
         });
         
         // Match nella categoria
-        if (product.category.toLowerCase().includes(term)) {
+        if (categoryLower.includes(term)) {
           score += 3;
         }
       });
