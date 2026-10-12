@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NotificationSettings } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -10,11 +10,33 @@ interface NotificationSettingsProps {
 export default function NotificationSettingsPanel({ settings, onSave }: NotificationSettingsProps) {
   const [localSettings, setLocalSettings] = useState<NotificationSettings>(settings);
   const [saved, setSaved] = useState(false);
+  const [emailValid, setEmailValid] = useState(true);
 
-  const handleSave = () => {
-    onSave(localSettings);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  // Sincronizza con le impostazioni esterne
+  useEffect(() => {
+    setLocalSettings(settings);
+  }, [settings]);
+
+  // Salva automaticamente quando le impostazioni cambiano
+  useEffect(() => {
+    if (localSettings.email && emailValid) {
+      onSave(localSettings);
+    }
+  }, [localSettings, emailValid, onSave]);
+
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+  const handleEmailChange = (email: string) => {
+    setLocalSettings(prev => ({ ...prev, email }));
+    setEmailValid(email === '' || validateEmail(email));
+    
+    if (email && validateEmail(email)) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
   };
 
   const toggleCondition = (condition: 'new' | 'refurbished' | 'used') => {
@@ -30,7 +52,7 @@ export default function NotificationSettingsPanel({ settings, onSave }: Notifica
     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          🔔 Configurazione Notifiche
+          📧 Configurazione Notifiche Email
         </h3>
         <div className="flex items-center gap-2">
           <button
@@ -60,15 +82,49 @@ export default function NotificationSettingsPanel({ settings, onSave }: Notifica
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                📧 Email di notifica
+                📧 Indirizzo Email
               </label>
-              <input
-                type="email"
-                value={localSettings.email}
-                onChange={(e) => setLocalSettings(prev => ({ ...prev, email: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="la-tua-email@esempio.it"
-              />
+              <div className="relative">
+                <input
+                  type="email"
+                  value={localSettings.email}
+                  onChange={(e) => handleEmailChange(e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:border-transparent ${
+                    !emailValid 
+                      ? 'border-red-500 focus:ring-red-500' 
+                      : localSettings.email && emailValid
+                      ? 'border-green-500 focus:ring-green-500'
+                      : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                  }`}
+                  placeholder="la-tua-email@esempio.it"
+                />
+                {localSettings.email && emailValid && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
+                    ✓
+                  </div>
+                )}
+              </div>
+              {!emailValid && (
+                <p className="text-xs text-red-500 mt-1">⚠️ Inserisci un indirizzo email valido</p>
+              )}
+              {localSettings.email && emailValid && (
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                  ✓ Email salvata! Riceverai le notifiche ogni giorno alle {localSettings.time}
+                </p>
+              )}
+              <AnimatePresence>
+                {saved && localSettings.email && emailValid && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="mt-2 p-2 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 rounded-lg text-sm flex items-center gap-2"
+                  >
+                    <span>✅</span>
+                    <span>Impostazioni salvate automaticamente</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Orario */}
@@ -160,17 +216,13 @@ export default function NotificationSettingsPanel({ settings, onSave }: Notifica
               </div>
             </div>
 
-            {/* Save button */}
-            <button
-              onClick={handleSave}
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-            >
-              {saved ? (
-                <>✓ Salvato!</>
-              ) : (
-                <>💾 Salva Configurazione</>
-              )}
-            </button>
+            {/* Info salvataggio automatico */}
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <p className="text-xs text-blue-700 dark:text-blue-400 flex items-center gap-2">
+                <span>💾</span>
+                <span>Le modifiche vengono salvate automaticamente nel browser</span>
+              </p>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
