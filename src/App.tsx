@@ -17,8 +17,7 @@ export default function App() {
   const [sortBy, setSortBy] = useState<string>('price_asc');
   const [isScanning, setIsScanning] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [showSearchResults, setShowSearchResults] = useState<boolean>(false);
-  const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
   const [selectedProduct, setSelectedProduct] = useState<string>('Garmin Edge 850');
   const [notifications, setNotifications] = useState<NotificationSettings>({
     enabled: true,
@@ -53,21 +52,14 @@ export default function App() {
     setTimeout(() => setIsScanning(false), 3000);
   };
 
-  const handleSearch = (query: string) => {
+  const handleSearchChange = (query: string) => {
     setSearchQuery(query);
-    if (query.trim().length > 0) {
-      setShowSearchResults(true);
-      setIsSearching(true);
-      setTimeout(() => setIsSearching(false), 1500);
-    } else {
-      setShowSearchResults(false);
-    }
   };
 
   const handleSelectProduct = (product: Product) => {
     setSelectedProduct(product.name);
-    setShowSearchResults(false);
     setSearchQuery('');
+    setIsSearchFocused(false);
   };
 
   // Real search results from database
@@ -75,6 +67,9 @@ export default function App() {
   
   // Popular products to show when search is empty
   const popularProducts = productsDatabase.slice(0, 5);
+  
+  // Show dropdown when focused
+  const showDropdown = isSearchFocused;
 
   const tabs: { id: TabType; label: string; icon: string }[] = [
     { id: 'offers', label: 'Offerte', icon: '🏷️' },
@@ -138,9 +133,9 @@ export default function App() {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-                onFocus={() => setShowSearchResults(true)}
-                onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setIsSearchFocused(false)}
                 placeholder="Cerca un prodotto da monitorare... (es: iPhone 15, PlayStation 5, Nike Air Max)"
                 className="w-full px-5 py-3 pl-12 bg-white/95 text-gray-900 rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-white/50 placeholder-gray-500 text-base"
               />
@@ -149,9 +144,9 @@ export default function App() {
               </div>
               {searchQuery && (
                 <button
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
                     setSearchQuery('');
-                    setShowSearchResults(false);
                   }}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xl"
                 >
@@ -162,25 +157,15 @@ export default function App() {
 
             {/* Search Results Dropdown */}
             <AnimatePresence>
-              {showSearchResults && (
+              {showDropdown && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50"
+                  onMouseDown={(e) => e.preventDefault()}
                 >
-                  {isSearching ? (
-                    <div className="p-6 text-center">
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                        className="inline-block text-3xl"
-                      >
-                        ⚙️
-                      </motion.div>
-                      <p className="text-gray-600 dark:text-gray-400 mt-2">Ricerca in corso...</p>
-                    </div>
-                  ) : searchQuery.trim().length === 0 ? (
+                  {searchQuery.trim().length === 0 ? (
                     <>
                       <div className="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                         <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
@@ -210,57 +195,58 @@ export default function App() {
                           </button>
                         ))}
                       </div>
+                      <div className="p-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                          💡 Digita per cercare o seleziona un prodotto popolare
+                        </p>
+                      </div>
                     </>
-                  ) : (
+                  ) : searchResults.length > 0 ? (
                     <>
                       <div className="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                         <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                          {searchResults.length > 0 
-                            ? `${searchResults.length} risultat${searchResults.length === 1 ? 'o' : 'i'} per "${searchQuery}"`
-                            : `Nessun risultato per "${searchQuery}"`
-                          }
+                          {searchResults.length} risultat{searchResults.length === 1 ? 'o' : 'i'} per "{searchQuery}"
                         </p>
                       </div>
                       <div className="max-h-96 overflow-y-auto">
-                        {searchResults.length > 0 ? (
-                          searchResults.map((result) => (
-                            <button
-                              key={result.id}
-                              onClick={() => handleSelectProduct(result)}
-                              className="w-full px-4 py-3 flex items-center gap-4 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left border-b border-gray-100 dark:border-gray-700 last:border-b-0"
-                            >
-                              <span className="text-3xl">{result.image}</span>
-                              <div className="flex-1">
-                                <p className="font-medium text-gray-900 dark:text-white">{result.name}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">{result.category}</p>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                  €{result.minPrice} - €{result.maxPrice}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  {result.offersCount} offerte
-                                </p>
-                              </div>
-                            </button>
-                          ))
-                        ) : (
-                          <div className="p-6 text-center">
-                            <p className="text-gray-500 dark:text-gray-400">
-                              Nessun prodotto trovato per "{searchQuery}"
-                            </p>
-                            <p className="text-xs text-gray-400 mt-2">
-                              Prova con: iPhone, PlayStation, Nike, Garmin...
-                            </p>
-                          </div>
-                        )}
+                        {searchResults.map((result) => (
+                          <button
+                            key={result.id}
+                            onClick={() => handleSelectProduct(result)}
+                            className="w-full px-4 py-3 flex items-center gap-4 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                          >
+                            <span className="text-3xl">{result.image}</span>
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-900 dark:text-white">{result.name}</p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">{result.category}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                €{result.minPrice} - €{result.maxPrice}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {result.offersCount} offerte
+                              </p>
+                            </div>
+                          </button>
+                        ))}
                       </div>
                       <div className="p-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700">
                         <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                          💡 Seleziona un prodotto per iniziare il monitoraggio
+                          💡 Clicca su un prodotto per iniziare il monitoraggio
                         </p>
                       </div>
                     </>
+                  ) : (
+                    <div className="p-6 text-center">
+                      <p className="text-4xl mb-2">🔍</p>
+                      <p className="text-gray-500 dark:text-gray-400 font-medium">
+                        Nessun prodotto trovato per "{searchQuery}"
+                      </p>
+                      <p className="text-xs text-gray-400 mt-2">
+                        Prova con: iPhone, PlayStation, Nike, Garmin, Sony...
+                      </p>
+                    </div>
                   )}
                 </motion.div>
               )}
