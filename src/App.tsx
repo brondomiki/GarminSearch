@@ -38,9 +38,10 @@ export default function App() {
       }
     });
 
-  const bestPrice = Math.min(...offers.map(o => o.price));
-  const avgPrice = offers.reduce((sum, o) => sum + o.price, 0) / offers.length;
+  const bestPrice = Math.min(...offers.filter(o => o.condition === 'new').map(o => o.price));
+  const avgPrice = offers.filter(o => o.condition === 'new').reduce((sum, o) => sum + o.price, 0) / offers.filter(o => o.condition === 'new').length;
   const newOffersCount = offers.filter(o => o.isNew).length;
+  const bestOffer = offers.filter(o => o.condition === 'new').reduce((best, o) => o.price < best.price ? o : best, offers[0]);
 
   const handleScan = () => {
     setIsScanning(true);
@@ -115,7 +116,7 @@ export default function App() {
           >
             <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Miglior Prezzo</p>
             <p className="text-2xl font-bold text-green-600 dark:text-green-400">€{bestPrice.toFixed(2)}</p>
-            <p className="text-xs text-gray-400">Bike-Components.de</p>
+            <p className="text-xs text-gray-400">{bestOffer.retailer}</p>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -256,16 +257,21 @@ export default function App() {
                     📧 Oggetto: Garmin Edge 850 - Riepilogo Offerte del 15/01/2026
                   </p>
                   <div className="mt-3 space-y-2 text-sm text-blue-700 dark:text-blue-400">
-                    <p>🎯 3 nuove offerte trovate oggi:</p>
+                    <p>🎯 5 nuove offerte trovate oggi:</p>
                     <ul className="list-disc list-inside space-y-1 ml-2">
                       <li>Bike-Components.de: €439.99 (-20%) ⭐ Miglior prezzo!</li>
-                      <li>eBay: €389.00 (ricondizionato, -29%)</li>
-                      <li>Decathlon: €469.00 (-15%)</li>
+                      <li>Amazon.it: €449.99 (-18%) — spedizione gratuita</li>
+                      <li>LordGun.com: €449.00 (-18%) — spedizione gratuita</li>
+                      <li>Cingolani Bike Shop: €449.99 (-18%)</li>
+                      <li>eBay.it: €389.00 (ricondizionato, -29%)</li>
                     </ul>
                     <p className="mt-2">📉 1 abbassamento di prezzo:</p>
                     <ul className="list-disc list-inside space-y-1 ml-2">
-                      <li>Bikester.it: €479.90 → €459.90</li>
+                      <li>Tredz.co.uk: £469.99 → £439.99 (-6%)</li>
                     </ul>
+                    <p className="mt-2 text-xs text-blue-500 dark:text-blue-400">
+                      💡 Prezzo medio attuale (nuovo): €469.00 | Risparmio max vs listino: -€110
+                    </p>
                   </div>
                 </div>
               </div>

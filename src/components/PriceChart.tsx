@@ -75,7 +75,7 @@ export default function PriceChart({ data }: PriceChartProps) {
           </div>
           <div className="flex items-center gap-1">
             <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-            <span className="text-gray-600 dark:text-gray-400">Media: €495.00</span>
+            <span className="text-gray-600 dark:text-gray-400">Media: €469.00</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-3 h-3 rounded-full bg-red-500"></div>
@@ -83,7 +83,7 @@ export default function PriceChart({ data }: PriceChartProps) {
           </div>
         </div>
         <span className="text-green-600 dark:text-green-400 font-medium">
-          ↓ -20% dal prezzo di lancio
+          ↓ -20% dal prezzo di listino (€549.99)
         </span>
       </div>
     </div>

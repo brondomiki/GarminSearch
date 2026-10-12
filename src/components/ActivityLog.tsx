@@ -8,16 +8,18 @@ interface ActivityLog {
 }
 
 const activityLogs: ActivityLog[] = [
-  { id: '1', timestamp: '2026-01-15T12:00:00', type: 'notification_sent', message: 'Notifica giornaliera inviata a utente@email.it con 3 nuove offerte' },
-  { id: '2', timestamp: '2026-01-15T12:00:00', type: 'offer_found', message: 'Nuova offerta trovata su Bike-Components.de: €439.99 (-20%)' },
-  { id: '3', timestamp: '2026-01-15T11:00:00', type: 'offer_found', message: 'Nuova offerta trovata su eBay: €389.00 (ricondizionato)' },
-  { id: '4', timestamp: '2026-01-15T10:30:00', type: 'offer_found', message: 'Nuova offerta trovata su Decathlon: €469.00 (-15%)' },
-  { id: '5', timestamp: '2026-01-15T10:00:00', type: 'scan', message: 'Scansione completata: 8 retailer controllati, 8 offerte trovate' },
-  { id: '6', timestamp: '2026-01-15T09:15:00', type: 'price_drop', message: 'Prezzo abbassato su Bikester.it: da €479.90 a €459.90' },
-  { id: '7', timestamp: '2026-01-15T08:00:00', type: 'scan', message: 'Scansione completata: 8 retailer controllati, 7 offerte trovate' },
-  { id: '8', timestamp: '2026-01-14T18:00:00', type: 'error', message: 'Errore connessione con Wiggle.it - timeout' },
-  { id: '9', timestamp: '2026-01-14T16:00:00', type: 'offer_found', message: 'Nuova offerta trovata su Subito.it: €350.00 (usato)' },
-  { id: '10', timestamp: '2026-01-14T12:00:00', type: 'notification_sent', message: 'Notifica giornaliera inviata a utente@email.it con 2 nuove offerte' },
+  { id: '1', timestamp: '2026-01-15T12:30:00', type: 'notification_sent', message: 'Notifica giornaliera inviata a utente@email.it con 5 nuove offerte' },
+  { id: '2', timestamp: '2026-01-15T12:00:00', type: 'offer_found', message: 'Nuova offerta su Amazon.it: €449.99 (-18%) — spedizione gratuita' },
+  { id: '3', timestamp: '2026-01-15T11:00:00', type: 'offer_found', message: 'Nuova offerta su Cingolani Bike Shop: €449.99 (-18%)' },
+  { id: '4', timestamp: '2026-01-15T10:30:00', type: 'offer_found', message: 'Nuova offerta su LordGun.com: €449.00 (-18%) — spedizione gratuita' },
+  { id: '5', timestamp: '2026-01-15T10:00:00', type: 'scan', message: 'Scansione completata: 10 retailer controllati, 10 offerte trovate' },
+  { id: '6', timestamp: '2026-01-15T09:15:00', type: 'price_drop', message: 'Prezzo abbassato su Tredz.co.uk: da £469.99 a £439.99 (-6%)' },
+  { id: '7', timestamp: '2026-01-15T08:00:00', type: 'scan', message: 'Scansione completata: 10 retailer controllati, 9 offerte trovate' },
+  { id: '8', timestamp: '2026-01-15T07:30:00', type: 'offer_found', message: 'Nuova offerta su eBay.it: €389.00 (ricondizionato, -29%)' },
+  { id: '9', timestamp: '2026-01-14T18:00:00', type: 'price_drop', message: 'Prezzo abbassato su Bike-Components.de: da €459.99 a €439.99 (-20%)' },
+  { id: '10', timestamp: '2026-01-14T16:00:00', type: 'notification_sent', message: 'Notifica giornaliera inviata a utente@email.it con 2 nuove offerte' },
+  { id: '11', timestamp: '2026-01-14T12:00:00', type: 'scan', message: 'Scansione completata: 10 retailer controllati, 8 offerte trovate' },
+  { id: '12', timestamp: '2026-01-14T10:00:00', type: 'offer_found', message: 'idealo.it: miglior prezzo attuale €449.00 da 3 venditori diversi' },
 ];
 
 export default function ActivityLogPanel() {
@@ -53,7 +55,7 @@ export default function ActivityLogPanel() {
           Ultime 24h
         </span>
       </div>
-      <div className="space-y-2 max-h-80 overflow-y-auto">
+      <div className="space-y-2 max-h-96 overflow-y-auto">
         {activityLogs.map((log, index) => (
           <motion.div
             key={log.id}
