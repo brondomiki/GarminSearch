@@ -6,19 +6,10 @@ import NotificationSettingsPanel from './components/NotificationSettings';
 import RetailerList from './components/RetailerList';
 import ActivityLogPanel from './components/ActivityLog';
 import { offers, priceHistory, retailers } from './data/offers';
+import { searchProducts, productsDatabase, Product } from './data/products';
 import { NotificationSettings } from './types';
 
 type TabType = 'offers' | 'chart' | 'notifications' | 'retailers' | 'logs';
-
-interface SearchResult {
-  id: string;
-  name: string;
-  image: string;
-  category: string;
-  minPrice: number;
-  maxPrice: number;
-  offersCount: number;
-}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('offers');
@@ -73,42 +64,17 @@ export default function App() {
     }
   };
 
-  const handleSelectProduct = (productName: string) => {
-    setSelectedProduct(productName);
+  const handleSelectProduct = (product: Product) => {
+    setSelectedProduct(product.name);
     setShowSearchResults(false);
     setSearchQuery('');
   };
 
-  // Simulated search results
-  const searchResults: SearchResult[] = searchQuery.trim().length > 0 ? [
-    {
-      id: '1',
-      name: searchQuery,
-      image: '📱',
-      category: 'Elettronica',
-      minPrice: 299,
-      maxPrice: 899,
-      offersCount: 15,
-    },
-    {
-      id: '2',
-      name: `${searchQuery} Pro`,
-      image: '⚡',
-      category: 'Elettronica',
-      minPrice: 499,
-      maxPrice: 1299,
-      offersCount: 8,
-    },
-    {
-      id: '3',
-      name: `${searchQuery} Plus`,
-      image: '✨',
-      category: 'Elettronica',
-      minPrice: 599,
-      maxPrice: 1499,
-      offersCount: 12,
-    },
-  ] : [];
+  // Real search results from database
+  const searchResults = searchProducts(searchQuery);
+  
+  // Popular products to show when search is empty
+  const popularProducts = productsDatabase.slice(0, 5);
 
   const tabs: { id: TabType; label: string; icon: string }[] = [
     { id: 'offers', label: 'Offerte', icon: '🏷️' },
@@ -173,6 +139,8 @@ export default function App() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
+                onFocus={() => setShowSearchResults(true)}
+                onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
                 placeholder="Cerca un prodotto da monitorare... (es: iPhone 15, PlayStation 5, Nike Air Max)"
                 className="w-full px-5 py-3 pl-12 bg-white/95 text-gray-900 rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-white/50 placeholder-gray-500 text-base"
               />
@@ -212,35 +180,80 @@ export default function App() {
                       </motion.div>
                       <p className="text-gray-600 dark:text-gray-400 mt-2">Ricerca in corso...</p>
                     </div>
-                  ) : (
+                  ) : searchQuery.trim().length === 0 ? (
                     <>
                       <div className="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                         <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                          Risultati per "{searchQuery}"
+                          🔥 Prodotti popolari
                         </p>
                       </div>
                       <div className="max-h-96 overflow-y-auto">
-                        {searchResults.map((result) => (
+                        {popularProducts.map((product) => (
                           <button
-                            key={result.id}
-                            onClick={() => handleSelectProduct(result.name)}
+                            key={product.id}
+                            onClick={() => handleSelectProduct(product)}
                             className="w-full px-4 py-3 flex items-center gap-4 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left border-b border-gray-100 dark:border-gray-700 last:border-b-0"
                           >
-                            <span className="text-3xl">{result.image}</span>
+                            <span className="text-3xl">{product.image}</span>
                             <div className="flex-1">
-                              <p className="font-medium text-gray-900 dark:text-white">{result.name}</p>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">{result.category}</p>
+                              <p className="font-medium text-gray-900 dark:text-white">{product.name}</p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">{product.category}</p>
                             </div>
                             <div className="text-right">
                               <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                €{result.minPrice} - €{result.maxPrice}
+                                da €{product.minPrice}
                               </p>
                               <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {result.offersCount} offerte
+                                {product.offersCount} offerte
                               </p>
                             </div>
                           </button>
                         ))}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                          {searchResults.length > 0 
+                            ? `${searchResults.length} risultat${searchResults.length === 1 ? 'o' : 'i'} per "${searchQuery}"`
+                            : `Nessun risultato per "${searchQuery}"`
+                          }
+                        </p>
+                      </div>
+                      <div className="max-h-96 overflow-y-auto">
+                        {searchResults.length > 0 ? (
+                          searchResults.map((result) => (
+                            <button
+                              key={result.id}
+                              onClick={() => handleSelectProduct(result)}
+                              className="w-full px-4 py-3 flex items-center gap-4 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                            >
+                              <span className="text-3xl">{result.image}</span>
+                              <div className="flex-1">
+                                <p className="font-medium text-gray-900 dark:text-white">{result.name}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{result.category}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                  €{result.minPrice} - €{result.maxPrice}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  {result.offersCount} offerte
+                                </p>
+                              </div>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="p-6 text-center">
+                            <p className="text-gray-500 dark:text-gray-400">
+                              Nessun prodotto trovato per "{searchQuery}"
+                            </p>
+                            <p className="text-xs text-gray-400 mt-2">
+                              Prova con: iPhone, PlayStation, Nike, Garmin...
+                            </p>
+                          </div>
+                        )}
                       </div>
                       <div className="p-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700">
                         <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
