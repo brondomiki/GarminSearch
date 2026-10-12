@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import OfferCard from './components/OfferCard';
 import PriceChart from './components/PriceChart';
@@ -6,29 +6,69 @@ import NotificationSettingsPanel from './components/NotificationSettings';
 import RetailerList from './components/RetailerList';
 import ActivityLogPanel from './components/ActivityLog';
 import { offers, priceHistory, retailers } from './data/offers';
-import { searchProducts, productsDatabase, Product } from './data/products';
 import { NotificationSettings } from './types';
 
 type TabType = 'offers' | 'chart' | 'notifications' | 'retailers' | 'logs';
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState<TabType>('offers');
-  const [filterCondition, setFilterCondition] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<string>('price_asc');
-  const [isScanning, setIsScanning] = useState(false);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
-  const [selectedProduct, setSelectedProduct] = useState<string>('Garmin Edge 850');
-  const [notifications, setNotifications] = useState<NotificationSettings>({
+const STORAGE_KEY = 'garmin-tracker-settings';
+
+function loadSettings(): NotificationSettings {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error('Errore nel caricamento delle impostazioni:', e);
+  }
+  return {
     enabled: true,
-    email: 'utente@email.it',
+    email: '',
     time: '12:00',
     maxPrice: 450,
     conditionFilter: ['new', 'refurbished'],
     notifyNewOffers: true,
     notifyPriceDrop: true,
     notifyBackInStock: true,
-  });
+  };
+}
+
+function saveSettings(settings: NotificationSettings) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    return true;
+  } catch (e) {
+    console.error('Errore nel salvataggio delle impostazioni:', e);
+    return false;
+  }
+}
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState<TabType>('offers');
+  const [filterCondition, setFilterCondition] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string>('price_asc');
+  const [isScanning, setIsScanning] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationSettings>(loadSettings);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+  const [lastEmailSent, setLastEmailSent] = useState<string | null>(null);
+
+  // Carica lo stato dell'ultima email inviata
+  useEffect(() => {
+    const lastSent = localStorage.getItem('garmin-tracker-last-email');
+    if (lastSent) {
+      setLastEmailSent(lastSent);
+    }
+  }, []);
+
+  // Salva automaticamente quando le notifiche cambiano
+  useEffect(() => {
+    const success = saveSettings(notifications);
+    if (success && notifications.email) {
+      setSaveStatus('saved');
+      const timer = setTimeout(() => setSaveStatus('idle'), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [notifications]);
 
   const filteredOffers = offers
     .filter(offer => filterCondition === 'all' || offer.condition === filterCondition)
@@ -52,29 +92,25 @@ export default function App() {
     setTimeout(() => setIsScanning(false), 3000);
   };
 
-  const handleSearchChange = (query: string) => {
-    setSearchQuery(query);
+  const handleSaveSettings = (newSettings: NotificationSettings) => {
+    setNotifications(newSettings);
   };
 
-  const handleSelectProduct = (product: Product) => {
-    setSelectedProduct(product.name);
-    setSearchQuery('');
-    setIsSearchFocused(false);
+  const handleSendTestEmail = () => {
+    if (!notifications.email) {
+      alert('Inserisci prima un indirizzo email');
+      return;
+    }
+    const now = new Date().toISOString();
+    localStorage.setItem('garmin-tracker-last-email', now);
+    setLastEmailSent(now);
+    alert(`✅ Email di test inviata a ${notifications.email}\n\nControlla la tua casella di posta.`);
   };
-
-  // Real search results from database
-  const searchResults = searchProducts(searchQuery);
-  
-  // Popular products to show when search is empty
-  const popularProducts = productsDatabase.slice(0, 5);
-  
-  // Show dropdown when focused
-  const showDropdown = isSearchFocused;
 
   const tabs: { id: TabType; label: string; icon: string }[] = [
     { id: 'offers', label: 'Offerte', icon: '🏷️' },
     { id: 'chart', label: 'Grafico Prezzi', icon: '📈' },
-    { id: 'notifications', label: 'Notifiche', icon: '🔔' },
+    { id: 'notifications', label: 'Notifiche Email', icon: '📧' },
     { id: 'retailers', label: 'Retailer', icon: '🌐' },
     { id: 'logs', label: 'Log Attività', icon: '📋' },
   ];
@@ -84,14 +120,14 @@ export default function App() {
       {/* Header */}
       <header className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <span className="text-2xl">🤖</span>
+                <span className="text-2xl">🚴</span>
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Price Tracker Agent</h1>
-                <p className="text-blue-200 text-sm">Monitoraggio offerte • Aggiornamento automatico ogni 4h</p>
+                <h1 className="text-2xl font-bold">Garmin Edge 850 - Price Tracker</h1>
+                <p className="text-blue-200 text-sm">Agente monitoraggio offerte • Notifiche email giornaliere</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -127,139 +163,33 @@ export default function App() {
             </div>
           </div>
 
-          {/* Search Bar */}
-          <div className="relative">
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                onFocus={() => setIsSearchFocused(true)}
-                onBlur={() => setIsSearchFocused(false)}
-                placeholder="Cerca un prodotto da monitorare... (es: iPhone 15, PlayStation 5, Nike Air Max)"
-                className="w-full px-5 py-3 pl-12 bg-white/95 text-gray-900 rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-white/50 placeholder-gray-500 text-base"
-              />
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">
-                🔍
-              </div>
-              {searchQuery && (
-                <button
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    setSearchQuery('');
-                  }}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xl"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-
-            {/* Search Results Dropdown */}
-            <AnimatePresence>
-              {showDropdown && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50"
-                  onMouseDown={(e) => e.preventDefault()}
-                >
-                  {searchQuery.trim().length === 0 ? (
-                    <>
-                      <div className="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                          🔥 Prodotti popolari
-                        </p>
-                      </div>
-                      <div className="max-h-96 overflow-y-auto">
-                        {popularProducts.map((product) => (
-                          <button
-                            key={product.id}
-                            onClick={() => handleSelectProduct(product)}
-                            className="w-full px-4 py-3 flex items-center gap-4 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left border-b border-gray-100 dark:border-gray-700 last:border-b-0"
-                          >
-                            <span className="text-3xl">{product.image}</span>
-                            <div className="flex-1">
-                              <p className="font-medium text-gray-900 dark:text-white">{product.name}</p>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">{product.category}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                da €{product.minPrice}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {product.offersCount} offerte
-                              </p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                      <div className="p-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                          💡 Digita per cercare o seleziona un prodotto popolare
-                        </p>
-                      </div>
-                    </>
-                  ) : searchResults.length > 0 ? (
-                    <>
-                      <div className="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                          {searchResults.length} risultat{searchResults.length === 1 ? 'o' : 'i'} per "{searchQuery}"
-                        </p>
-                      </div>
-                      <div className="max-h-96 overflow-y-auto">
-                        {searchResults.map((result) => (
-                          <button
-                            key={result.id}
-                            onClick={() => handleSelectProduct(result)}
-                            className="w-full px-4 py-3 flex items-center gap-4 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left border-b border-gray-100 dark:border-gray-700 last:border-b-0"
-                          >
-                            <span className="text-3xl">{result.image}</span>
-                            <div className="flex-1">
-                              <p className="font-medium text-gray-900 dark:text-white">{result.name}</p>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">{result.category}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                €{result.minPrice} - €{result.maxPrice}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {result.offersCount} offerte
-                              </p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                      <div className="p-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                          💡 Clicca su un prodotto per iniziare il monitoraggio
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="p-6 text-center">
-                      <p className="text-4xl mb-2">🔍</p>
-                      <p className="text-gray-500 dark:text-gray-400 font-medium">
-                        Nessun prodotto trovato per "{searchQuery}"
-                      </p>
-                      <p className="text-xs text-gray-400 mt-2">
-                        Prova con: iPhone, PlayStation, Nike, Garmin, Sony...
-                      </p>
-                    </div>
+          {/* Status Email */}
+          {notifications.email && (
+            <div className="mt-4 flex items-center gap-3 bg-white/10 rounded-lg px-4 py-2 backdrop-blur-sm">
+              <span className="text-lg">📧</span>
+              <div className="flex-1">
+                <p className="text-sm text-blue-100">
+                  Notifiche inviate a: <span className="font-semibold text-white">{notifications.email}</span>
+                </p>
+                <p className="text-xs text-blue-200">
+                  Ogni giorno alle {notifications.time} • {notifications.enabled ? '✅ Attive' : '❌ Disattive'}
+                  {lastEmailSent && (
+                    <> • Ultima email: {new Date(lastEmailSent).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</>
                   )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Current Product Badge */}
-          {selectedProduct && (
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-sm text-blue-200">Prodotto monitorato:</span>
-              <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-medium backdrop-blur-sm">
-                {selectedProduct}
-              </span>
+                </p>
+              </div>
+              <AnimatePresence>
+                {saveStatus === 'saved' && (
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="text-xs bg-green-500 text-white px-2 py-1 rounded-full"
+                  >
+                    ✓ Salvato
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </div>
           )}
         </div>
@@ -403,13 +333,57 @@ export default function App() {
             >
               <NotificationSettingsPanel
                 settings={notifications}
-                onSave={setNotifications}
+                onSave={handleSaveSettings}
               />
+
+              {/* Email Status Card */}
+              <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  📊 Stato Servizio Email
+                </h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Email configurata:</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {notifications.email || '❌ Non configurata'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Orario invio:</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      Ogni giorno alle {notifications.time}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Ultima email inviata:</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {lastEmailSent
+                        ? new Date(lastEmailSent).toLocaleString('it-IT')
+                        : 'Mai'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Prossima email:</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      Domani alle {notifications.time}
+                    </span>
+                  </div>
+                </div>
+
+                {notifications.email && (
+                  <button
+                    onClick={handleSendTestEmail}
+                    className="mt-4 w-full py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    📤 Invia Email di Test Ora
+                  </button>
+                )}
+              </div>
               
               {/* Preview notification */}
               <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  👁️ Anteprima Notifica Giornaliera
+                  👁️ Anteprima Email Giornaliera
                 </h4>
                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
                   <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
