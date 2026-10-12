@@ -10,11 +10,25 @@ import { NotificationSettings } from './types';
 
 type TabType = 'offers' | 'chart' | 'notifications' | 'retailers' | 'logs';
 
+interface SearchResult {
+  id: string;
+  name: string;
+  image: string;
+  category: string;
+  minPrice: number;
+  maxPrice: number;
+  offersCount: number;
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('offers');
   const [filterCondition, setFilterCondition] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('price_asc');
   const [isScanning, setIsScanning] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [showSearchResults, setShowSearchResults] = useState<boolean>(false);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [selectedProduct, setSelectedProduct] = useState<string>('Garmin Edge 850');
   const [notifications, setNotifications] = useState<NotificationSettings>({
     enabled: true,
     email: 'utente@email.it',
@@ -48,6 +62,54 @@ export default function App() {
     setTimeout(() => setIsScanning(false), 3000);
   };
 
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim().length > 0) {
+      setShowSearchResults(true);
+      setIsSearching(true);
+      setTimeout(() => setIsSearching(false), 1500);
+    } else {
+      setShowSearchResults(false);
+    }
+  };
+
+  const handleSelectProduct = (productName: string) => {
+    setSelectedProduct(productName);
+    setShowSearchResults(false);
+    setSearchQuery('');
+  };
+
+  // Simulated search results
+  const searchResults: SearchResult[] = searchQuery.trim().length > 0 ? [
+    {
+      id: '1',
+      name: searchQuery,
+      image: '📱',
+      category: 'Elettronica',
+      minPrice: 299,
+      maxPrice: 899,
+      offersCount: 15,
+    },
+    {
+      id: '2',
+      name: `${searchQuery} Pro`,
+      image: '⚡',
+      category: 'Elettronica',
+      minPrice: 499,
+      maxPrice: 1299,
+      offersCount: 8,
+    },
+    {
+      id: '3',
+      name: `${searchQuery} Plus`,
+      image: '✨',
+      category: 'Elettronica',
+      minPrice: 599,
+      maxPrice: 1499,
+      offersCount: 12,
+    },
+  ] : [];
+
   const tabs: { id: TabType; label: string; icon: string }[] = [
     { id: 'offers', label: 'Offerte', icon: '🏷️' },
     { id: 'chart', label: 'Grafico Prezzi', icon: '📈' },
@@ -61,14 +123,14 @@ export default function App() {
       {/* Header */}
       <header className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                <span className="text-2xl">🚴</span>
+                <span className="text-2xl">🤖</span>
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Garmin Edge 850 - Price Tracker</h1>
-                <p className="text-blue-200 text-sm">Agente monitoraggio offerte • Aggiornamento automatico ogni 4h</p>
+                <h1 className="text-2xl font-bold">Price Tracker Agent</h1>
+                <p className="text-blue-200 text-sm">Monitoraggio offerte • Aggiornamento automatico ogni 4h</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -103,6 +165,104 @@ export default function App() {
               </div>
             </div>
           </div>
+
+          {/* Search Bar */}
+          <div className="relative">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                placeholder="Cerca un prodotto da monitorare... (es: iPhone 15, PlayStation 5, Nike Air Max)"
+                className="w-full px-5 py-3 pl-12 bg-white/95 text-gray-900 rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-white/50 placeholder-gray-500 text-base"
+              />
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">
+                🔍
+              </div>
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setShowSearchResults(false);
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xl"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Search Results Dropdown */}
+            <AnimatePresence>
+              {showSearchResults && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50"
+                >
+                  {isSearching ? (
+                    <div className="p-6 text-center">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        className="inline-block text-3xl"
+                      >
+                        ⚙️
+                      </motion.div>
+                      <p className="text-gray-600 dark:text-gray-400 mt-2">Ricerca in corso...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="p-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                          Risultati per "{searchQuery}"
+                        </p>
+                      </div>
+                      <div className="max-h-96 overflow-y-auto">
+                        {searchResults.map((result) => (
+                          <button
+                            key={result.id}
+                            onClick={() => handleSelectProduct(result.name)}
+                            className="w-full px-4 py-3 flex items-center gap-4 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-left border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                          >
+                            <span className="text-3xl">{result.image}</span>
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-900 dark:text-white">{result.name}</p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">{result.category}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                €{result.minPrice} - €{result.maxPrice}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {result.offersCount} offerte
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                      <div className="p-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                          💡 Seleziona un prodotto per iniziare il monitoraggio
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Current Product Badge */}
+          {selectedProduct && (
+            <div className="mt-3 flex items-center gap-2">
+              <span className="text-sm text-blue-200">Prodotto monitorato:</span>
+              <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-medium backdrop-blur-sm">
+                {selectedProduct}
+              </span>
+            </div>
+          )}
         </div>
       </header>
 
